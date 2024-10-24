@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code | Scanner</title>
+</head>
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+    }
+
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block;
+        text-align: left;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 1em;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #218838;
+    }
+
+    .video-container {
+        line-height: 0;
+    }
+
+    .video-container.example-style-1 .scan-region-highlight-svg,
+    .video-container.example-style-1 .code-outline-highlight {
+        stroke: #64a2f3 !important;
+    }
+
+    .video-container.example-style-2 {
+        position: relative;
+        width: max-content;
+        height: max-content;
+        overflow: hidden;
+    }
+
+    .video-container.example-style-2 .scan-region-highlight {
+        border-radius: 30px;
+        outline: rgba(0, 0, 0, 0.25) solid 50vmax;
+    }
+
+    .video-container.example-style-2 .scan-region-highlight-svg {
+        display: none;
+    }
+
+    .video-container.example-style-2 .code-outline-highlight {
+        stroke: rgba(255, 255, 255, 0.5) !important;
+        stroke-width: 15 !important;
+        stroke-dasharray: none !important;
+    }
+
+    .cam-qr-result {
+        color: red;
+    }
+
+    .video-container {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+<body>
+<div class="container">
+    <h1>QR Code Scanner</h1>
+    <div style="border: 1px solid #ccc;padding: 10px;display: flex;flex-direction: column;align-items: center;gap: 10px;border-radius: 3px;max-width: 600px;margin: 0 auto;">
+        <b>Detected QR code: </b>
+        <span class="cam-qr-result" id="cam-qr-result">None</span>
+    </div>
+    <br><hr/><br>
+    <button id="start-button">Start Scan</button>
+</div>
+
+<div class="video-container" id="video-container">
+    <video class="qr-video" id="qr-video"></video>
+</div>
+
+<div style="display: none">
+    <select id="inversion-mode-select">
+        <option value="original">
+            Scan original (dark QR code on bright background)
+        </option>
+        <option value="invert">
+            Scan with inverted colors (bright QR code on dark background)
+        </option>
+        <option value="both">Scan both</option>
+    </select>
+    <br />
+</div>
+</body>
+
+<script src="/js/qr-scanner.umd.min.js"></script>
+<script src="/js/qr-scanner-worker.min.js" type="module"></script>
+<script>
+    const video = document.getElementById("qr-video");
+    const videoContainer = document.getElementById("video-container");
+    const camQrResult = document.getElementById("cam-qr-result");
+
+    function setResult(label, result) {
+        console.log(result.data);
+        label.textContent = result.data;
+        label.style.color = "red";
+        clearTimeout(label.highlightTimeout);
+        videoContainer.style.display = 'none';
+        scanner.stop();
+        label.highlightTimeout = setTimeout(
+            () => (label.style.color = "red"),
+            100
+        );
+    }
+
+    const scanner = new QrScanner(
+        video,
+        (result) => setResult(camQrResult, result),
+        {
+            onDecodeError: (error) => {
+                camQrResult.textContent = error;
+            },
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+
+        }
+    );
+
+    document
+        .getElementById("inversion-mode-select")
+        .addEventListener("change", (event) => {
+            scanner.setInversionMode(event.target.value);
+        });
+
+    document.getElementById("start-button").addEventListener("click", async () => {
+        try {
+            // 카메라 접근 권한 확인
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            scanner.start();
+            videoContainer.style.display = 'flex';
+        } catch (error) {
+            // 카메라 접근 실패 시 얼럿 표시
+            alert("No camera found or access denied.\nPlease connect a camera or allow access to use this feature.");
+            // alert("QR 스캔은 카메라 기능이 필요합니다.");
+        }
+    });
+</script>
+</html>
